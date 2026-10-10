@@ -60,7 +60,12 @@ $secret = Read-Host 'Bot Secret' -AsSecureString
 $env:CODEX_WECOM_BOT_SECRET = [System.Net.NetworkCredential]::new('', $secret).Password
 ```
 
-Then start Codex and enter `/wecom`. Both variables must be set. This mode skips
+Then start Codex and enter `/wecom`. WebSocket is the default transport. When
+using environment variables, both must be set. Without them, Windows reads
+`wecom-bot.credential.xml` from `CODEX_HOME` (default `~/.codex`) using the current
+user's DPAPI credentials. See the root README for the `Export-Clixml` setup.
+Missing or invalid credentials fail closed. Only an explicit
+`CODEX_WECOM_TRANSPORT=cli` enables legacy polling and QR login. WebSocket mode skips
 CLI QR login and waits for WebSocket authentication before showing the pairing
 code. Send the code in a private chat with that bot. The existing sender binding,
 deduplication, approval routing and current-terminal conversation still apply.
@@ -81,7 +86,7 @@ from the global npm installation associated with a directory on `PATH`.
 Tests (from the repo root):
 
 ```sh
-node --test codex-rs/tui/assets/im-bridge/runtime_tests.mjs codex-rs/tui/assets/im-bridge/process_tests.mjs codex-rs/tui/assets/im-bridge/wecom_ws_tests.mjs codex-rs/tui/assets/im-bridge/wecom_sdk_tests.mjs
+node --test codex-rs/tui/assets/im-bridge/*_tests.mjs
 just test -p codex-tui
 ```
 

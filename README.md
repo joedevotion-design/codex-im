@@ -19,7 +19,7 @@
 | `/lark` | 飞书/Lark CLI 机器人事件 | `lark-cli`、机器人消息权限、事件订阅 |
 | `/dingtalk` | 通过 `dws` 获取配置，使用机器人 Stream 连接 | `dws`、已开启 Stream 的机器人、`unifiedAppId` |
 | `/wecom` | **推荐：智能机器人 API 长连接** | 官方 SDK、Bot ID、Bot Secret |
-| `/wecom` | 兼容：WeCom CLI 登录后轮询消息 | `wecom-cli`，企业允许会话及聊天记录接口 |
+| `/wecom` | 可选兼容模式：WeCom CLI 轮询 | 显式设置 `CODEX_WECOM_TRANSPORT=cli`，且企业允许相关接口 |
 
 **电脑、Codex 终端和网络必须保持运行。** 这不是云端托管或后台常驻服务。扫码只完成相应 CLI 授权，不等于创建好机器人或开通消息权限；企业微信长连接使用机器人凭据，不需要扫码。
 
@@ -160,7 +160,21 @@ $env:CODEX_WECOM_BOT_SECRET = [System.Net.NetworkCredential]::new('', $secret).P
 
 随后启动自建 Codex 并输入 `/wecom`。该模式跳过扫码，在 WebSocket 认证成功后显示配对码；向机器人私聊发送配对消息。它不依赖读取聊天记录的接口权限，仅接受私聊文本。
 
-两个环境变量必须同时提供。连接失败不会自动退回 CLI 轮询。SDK 需要安装在启动终端 `PATH` 对应的 npm 全局安装位置。建议使用专用机器人，另一客户端使用相同机器人连接可能挤掉当前连接。
+`/wecom` 默认使用长连接，不再自动扫码或回退到轮询。通过环境变量配置时，两个变量必须同时提供；缺少或无法读取配置会明确报错。SDK 需要安装在启动终端 `PATH` 对应的 npm 全局安装位置。建议使用专用机器人，另一客户端使用相同机器人连接可能挤掉当前连接。
+
+Windows 用户也可保存当前用户加密的凭据，之后普通启动 CLI 即可读取，无需专用启动脚本。在 PowerShell 中执行：
+
+```powershell
+$botId = Read-Host 'Bot ID'
+$secret = Read-Host 'Bot Secret' -AsSecureString
+$codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $HOME '.codex' }
+$null = New-Item -ItemType Directory -Force -Path $codexHome
+[System.Management.Automation.PSCredential]::new($botId, $secret) |
+    Export-Clixml -LiteralPath (Join-Path $codexHome 'wecom-bot.credential.xml')
+$secret.Dispose()
+```
+
+凭据文件只在未提供上述环境变量时读取，默认位置为 `~/.codex/wecom-bot.credential.xml`，设置 `CODEX_HOME` 时使用该目录。文件中的 Secret 由 Windows DPAPI 加密，只能由同一台机器上的同一 Windows 用户解密；不要将其提交到仓库。更新 Secret 后重新保存，并断开、重连 `/wecom`。
 
 **不要把 Secret 发到 Codex、IM 聊天或提交进仓库。** 凭据会以环境变量传给本地桥接进程，不写入连接文件。退出 Codex 后若继续共用终端，可清除变量：
 
@@ -170,7 +184,7 @@ Remove-Item Env:CODEX_WECOM_BOT_ID, Env:CODEX_WECOM_BOT_SECRET -ErrorAction Sile
 
 ### 企业微信：CLI 扫码与轮询
 
-未设置上述机器人环境变量时，`/wecom` 使用兼容的 CLI 模式：
+仅当启动 Codex 前显式设置 `CODEX_WECOM_TRANSPORT=cli` 时，`/wecom` 才使用兼容的扫码轮询模式。此模式仍需要聊天记录接口权限，不是长连接失败时的备用路径：
 
 ```shell
 npm install -g @wecom/cli
@@ -217,7 +231,7 @@ npm install -g @wecom/cli
 从仓库根目录运行桥接测试：
 
 ```shell
-node --test codex-rs/tui/assets/im-bridge/runtime_tests.mjs codex-rs/tui/assets/im-bridge/process_tests.mjs codex-rs/tui/assets/im-bridge/wecom_ws_tests.mjs codex-rs/tui/assets/im-bridge/wecom_sdk_tests.mjs
+node --test codex-rs/tui/assets/im-bridge/*_tests.mjs
 just test -p codex-tui --cargo-profile dev-small
 ```
 

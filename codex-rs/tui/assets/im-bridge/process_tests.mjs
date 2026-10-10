@@ -54,6 +54,7 @@ if (args.join(' ') === 'message aibot sessions list') {
       await writeFile(join(root, "wecom-cli"), fixture, { mode: 0o755 });
       const env = {
         ...process.env,
+        CODEX_WECOM_TRANSPORT: "cli",
         PATH: `${root}${delimiter}${process.env.PATH}`,
       };
       delete env.CODEX_WECOM_BOT_ID;

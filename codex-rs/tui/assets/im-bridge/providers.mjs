@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
 import { cli, launch, lines } from "./runtime.mjs";
-import { wecomSocket } from "./wecom_ws.mjs";
+import { loadWecomCredentials, wecomSocket, wecomTransport } from "./wecom_ws.mjs";
 
 export function unwrap(value) {
   for (let depth = 0; depth < 5; depth++) {
@@ -63,11 +63,8 @@ function wecomTime(date) {
 }
 
 export async function wecom(receive, fail) {
-  if (process.env.CODEX_WECOM_BOT_ID || process.env.CODEX_WECOM_BOT_SECRET)
-    return wecomSocket(receive, fail, {
-      botId: process.env.CODEX_WECOM_BOT_ID,
-      secret: process.env.CODEX_WECOM_BOT_SECRET,
-    });
+  if (wecomTransport() === "websocket")
+    return wecomSocket(receive, fail, await loadWecomCredentials());
   let since = Date.now();
   const poll = async () => {
     const until = Date.now();

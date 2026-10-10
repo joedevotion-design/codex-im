@@ -2,7 +2,7 @@ import { createInterface } from "node:readline/promises";
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { Bridge, Pairing, children, cleanups, cli, lines } from "./runtime.mjs";
-import { loadWecomClient } from "./wecom_ws.mjs";
+import { loadWecomClient, loadWecomCredentials, wecomTransport } from "./wecom_ws.mjs";
 import { lark, wecom, dingtalk } from "./providers.mjs";
 
 const [provider, mode] = process.argv.slice(2);
@@ -44,15 +44,9 @@ try {
   if (mode === "setup") {
     if (
       provider === "wecom" &&
-      (process.env.CODEX_WECOM_BOT_ID || process.env.CODEX_WECOM_BOT_SECRET)
+      wecomTransport() === "websocket"
     ) {
-      if (
-        !process.env.CODEX_WECOM_BOT_ID ||
-        !process.env.CODEX_WECOM_BOT_SECRET
-      )
-        throw new Error(
-          "Set both CODEX_WECOM_BOT_ID and CODEX_WECOM_BOT_SECRET locally before starting Codex.",
-        );
+      await loadWecomCredentials();
       loadWecomClient();
       writeFileSync(settings, "{}", { mode: 0o600 });
       stop();
@@ -132,6 +126,8 @@ try {
   process.stdin.on("end", () => stop());
   lines(process.stdin, (message) => bridge.receive(message), fail);
   sendRaw = await { lark, wecom, dingtalk }[provider](receive, fail, appId);
+  if (provider === "wecom" && wecomTransport() === "websocket")
+    emit({ kind: "status", text: "WeCom API long connection authenticated. Chat-history access is not used." });
   emit({
     kind: "status",
     text: `Within five minutes, send this exact message to your bot in a private chat:\n/pair ${pairing.code}`,

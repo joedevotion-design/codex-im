@@ -1,8 +1,55 @@
 import { createRequire } from "node:module";
+import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { promisify } from "node:util";
 import { delimiter, join } from "node:path";
 import { cleanups } from "./runtime.mjs";
 
 const require = createRequire(import.meta.url);
+
+export function wecomTransport(env = process.env) {
+  const mode = env.CODEX_WECOM_TRANSPORT || "websocket";
+  if (!["websocket", "cli"].includes(mode))
+    throw new Error("CODEX_WECOM_TRANSPORT must be websocket or cli.");
+  return mode;
+}
+
+export async function loadWecomCredentials({
+  env = process.env,
+  platform = process.platform,
+  readCredential = promisify(execFile),
+} = {}) {
+  const botId = env.CODEX_WECOM_BOT_ID?.trim();
+  const secret = env.CODEX_WECOM_BOT_SECRET;
+  if (botId || secret) {
+    if (!botId || !secret?.trim())
+      throw new Error("Set both CODEX_WECOM_BOT_ID and CODEX_WECOM_BOT_SECRET; partial credentials cannot use saved credentials.");
+    return { botId, secret };
+  }
+  const path = join(env.CODEX_HOME || join(homedir(), ".codex"), "wecom-bot.credential.xml");
+  if (platform === "win32" && existsSync(path)) {
+    try {
+      const readerEnv = { ...env, CODEX_WECOM_CREDENTIAL_PATH: path };
+      // Windows PowerShell must not load incompatible modules inherited from pwsh.
+      delete readerEnv.PSModulePath;
+      const { stdout } = await readCredential(
+        join(env.SystemRoot || "C:\\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe"),
+        ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command",
+          "$ErrorActionPreference='Stop'; [Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); $c=Import-Clixml -LiteralPath $env:CODEX_WECOM_CREDENTIAL_PATH; if ($c -isnot [System.Management.Automation.PSCredential]) { throw 'Invalid credential' }; @{botId=$c.UserName;secret=$c.GetNetworkCredential().Password} | ConvertTo-Json -Compress"],
+        { env: readerEnv, windowsHide: true, timeout: 10_000, maxBuffer: 16_384 },
+      );
+      const value = JSON.parse(stdout.replace(/^\uFEFF/, ""));
+      if (typeof value.botId !== "string" || !value.botId.trim() ||
+          typeof value.secret !== "string" || !value.secret.trim())
+        throw new Error("Invalid credential");
+      return { botId: value.botId.trim(), secret: value.secret };
+    } catch {
+      throw new Error("Cannot read saved WeCom credentials. Reconfigure them under the current Windows user. No QR fallback was attempted.");
+    }
+  }
+  throw new Error("WeCom requires an API long-connection bot. Set CODEX_WECOM_BOT_ID and CODEX_WECOM_BOT_SECRET, or configure the Windows user-encrypted wecom-bot.credential.xml in CODEX_HOME (default ~/.codex). QR login is not used.");
+}
 
 export function loadWecomClient() {
   for (const directory of (process.env.PATH ?? "").split(delimiter)) {
