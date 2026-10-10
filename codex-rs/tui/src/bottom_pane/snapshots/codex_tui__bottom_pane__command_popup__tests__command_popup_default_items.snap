@@ -51,3 +51,6 @@ expression: commands
 /clear - clear the terminal and start a new chat
 /test-approval - test approval request
 /subagents - switch between this session's subagents
+/lark - connect or disconnect Feishu/Lark for this chat
+/dingtalk - connect or disconnect DingTalk for this chat
+/wecom - connect or disconnect WeCom for this chat

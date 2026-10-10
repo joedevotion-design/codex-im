@@ -78,6 +78,9 @@ pub enum SlashCommand {
     TestApproval,
     #[strum(serialize = "subagents")]
     MultiAgents,
+    Lark,
+    Dingtalk,
+    Wecom,
     // Debugging commands.
     #[strum(serialize = "debug-m-drop")]
     MemoryDrop,
@@ -103,6 +106,9 @@ impl SlashCommand {
             SlashCommand::Fork => "fork the current chat",
             SlashCommand::Worktree => "start or continue a conversation in a new worktree",
             SlashCommand::App => "continue this session in the Desktop app",
+            SlashCommand::Lark => "connect or disconnect Feishu/Lark for this chat",
+            SlashCommand::Dingtalk => "connect or disconnect DingTalk for this chat",
+            SlashCommand::Wecom => "connect or disconnect WeCom for this chat",
             SlashCommand::Quit | SlashCommand::Exit => "exit Codex",
             SlashCommand::Copy => "copy the last response or part of it",
             SlashCommand::Export => "export the conversation as markdown",
@@ -219,6 +225,9 @@ impl SlashCommand {
         matches!(
             self,
             SlashCommand::New
+                | SlashCommand::Lark
+                | SlashCommand::Dingtalk
+                | SlashCommand::Wecom
                 | SlashCommand::Clear
                 | SlashCommand::Resume
                 | SlashCommand::Agents
@@ -262,6 +271,9 @@ impl SlashCommand {
             | SlashCommand::MemoryDrop
             | SlashCommand::MemoryUpdate => false,
             SlashCommand::Diff
+            | SlashCommand::Lark
+            | SlashCommand::Dingtalk
+            | SlashCommand::Wecom
             | SlashCommand::Resume
             | SlashCommand::Model
             | SlashCommand::Permissions

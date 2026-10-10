@@ -225,6 +225,7 @@ mod feedback_upload;
 mod file_change_approvals;
 mod history_pagination;
 mod history_ui;
+mod im_bridge;
 mod input;
 mod link_hover;
 mod loaded_threads;
@@ -523,6 +524,7 @@ struct InitialHistoryReplayBuffer {
 }
 
 pub(crate) struct App {
+    im_bridge: Option<im_bridge::ImBridge>,
     feature_write_lock: Arc<tokio::sync::Mutex<()>>,
     model_catalog: Arc<ModelCatalog>,
     pub(crate) session_telemetry: SessionTelemetry,

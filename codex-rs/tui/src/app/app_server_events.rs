@@ -89,6 +89,17 @@ impl App {
                 self.refresh_agents_overview_threads(app_server_client);
             }
             AppServerEvent::ServerNotification(notification) => {
+                if self.im_bridge.is_some()
+                    && matches!(
+                        notification.as_ref(),
+                        ServerNotification::ItemCompleted(_)
+                            | ServerNotification::TurnCompleted(_)
+                            | ServerNotification::ServerRequestResolved(_)
+                    )
+                    && let Ok(data) = serde_json::to_value(notification.as_ref())
+                {
+                    self.im_event("notification", data);
+                }
                 let request_resolved = matches!(
                     notification.as_ref(),
                     ServerNotification::ServerRequestResolved(_)
@@ -100,6 +111,11 @@ impl App {
                 }
             }
             AppServerEvent::ServerRequest(request) => {
+                if self.im_bridge.is_some()
+                    && let Ok(data) = serde_json::to_value(request.as_ref())
+                {
+                    self.im_event("request", data);
+                }
                 self.handle_server_request_event(app_server_client, *request)
                     .await;
                 self.repaint_agents_overview();

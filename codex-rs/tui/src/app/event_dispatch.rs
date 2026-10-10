@@ -52,6 +52,8 @@ impl App {
             && !matches!(
                 &event,
                 AppEvent::OpenDaemonMenu
+                    | AppEvent::ConnectIm(_)
+                    | AppEvent::ImMessage { .. }
                     | AppEvent::OpenWarnings
                     | AppEvent::CopyWarning(_)
                     | AppEvent::UpdateWarnings { .. }
@@ -134,6 +136,8 @@ impl App {
             event => (event, None),
         };
         match event {
+            AppEvent::ConnectIm(provider) => self.connect_im(tui, provider).await,
+            AppEvent::ImMessage { generation, message } => self.im_message(app_server, generation, message).await,
             AppEvent::OpenDaemonMenu => self.open_daemon_menu(),
             AppEvent::ConfirmDaemonUpdate(source) => self.confirm_daemon_update(source),
             AppEvent::RunDaemonUpdate(source) => {
