@@ -91,16 +91,8 @@ credentials, permissions or event subscription. The SDK integration test uses
 the installed official SDK against a local WebSocket server to check wire-level
 authentication and message delivery; it is skipped when that SDK is absent.
 
-For Windows builds that crash in LLVM CodeView debug-info generation, the
-existing `dev-small` profile disables debug symbols without changing the pinned
-Rust toolchain. From `codex-rs`:
-
-```powershell
-$env:CARGO_BUILD_JOBS = '1'
-just test -p codex-tui --cargo-profile dev-small
-cargo build -p codex-cli -p codex-code-mode-host -p codex-windows-sandbox --bins --profile dev-small
-.\target\dev-small\codex.exe
-```
+For platform prerequisites and build commands, see the
+[repository build guide](../../../../README.md#build).
 
 Keep the generated helper executables beside `codex.exe`. Building only the
 TUI or CLI does not build the standalone code-mode host needed by some models
